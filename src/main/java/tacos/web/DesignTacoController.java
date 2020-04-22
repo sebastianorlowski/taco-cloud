@@ -1,78 +1,84 @@
-// tag::head[]
 package tacos.web;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import javax.validation.Valid;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.Errors;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 import lombok.extern.slf4j.Slf4j;
 import tacos.Ingredient;
 import tacos.Ingredient.Type;
+import tacos.Order;
 import tacos.Taco;
+import tacos.data.IngredientRepository;
+import tacos.data.TacoRepository;
 
-@Slf4j
 @Controller
 @RequestMapping("/design")
+@SessionAttributes("order")
 public class DesignTacoController {
 
-//end::head[]
+    private final IngredientRepository ingredientRepository;
+    private TacoRepository designRepo;
 
-    @ModelAttribute
-    public void addIngredientsToModel(Model model) {
-        List<Ingredient> ingredients = Arrays.asList(
-                new Ingredient("FLTO", "pszenna", Type.WRAP),
-                new Ingredient("COTO", "kukurydziana", Type.WRAP),
-                new Ingredient("GRBF", "mielona wołowina", Type.PROTEIN),
-                new Ingredient("CARN", "kawałki mięsa", Type.PROTEIN),
-                new Ingredient("TMTO", "pomidory pokrojone w kostkę", Type.VEGGIES),
-                new Ingredient("LETC", "sałata", Type.VEGGIES),
-                new Ingredient("CHED", "cheddar", Type.CHEESE),
-                new Ingredient("JACK", "Monterrey Jack", Type.CHEESE),
-                new Ingredient("SLSA", "pikantny sos pomidorowy", Type.SAUCE),
-                new Ingredient("SRCR", "śmietana", Type.SAUCE)
-        );
+    public DesignTacoController(IngredientRepository ingredientRepository) {
+        this.ingredientRepository = ingredientRepository;
+    }
+
+    @Autowired
+    public DesignTacoController(IngredientRepository ingredientRepository, TacoRepository designRepo) {
+        this.ingredientRepository = ingredientRepository;
+        this.designRepo = designRepo;
+
+    }
+
+    @GetMapping
+    public String showDesignForm(Model model) {
+        List<Ingredient> ingredients = new ArrayList<>();
+        ingredientRepository.findAll().forEach(i -> ingredients.add(i));
 
         Type[] types = Ingredient.Type.values();
-        for (Type type : types) {
+        for(Type type : types) {
             model.addAttribute(type.toString().toLowerCase(),
                     filterByType(ingredients, type));
         }
-    }
-
-    //tag::showDesignForm[]
-    @GetMapping
-    public String showDesignForm(Model model) {
-        model.addAttribute("design", new Taco());
         return "design";
     }
 
-//end::showDesignForm[]
+   @ModelAttribute(name = "order")
+   public Order order() {
+        return new Order();
+   }
 
- @PostMapping
- public String processDesign() {
-        log.info("Przetwarzanie projektu taco: " );
+   @ModelAttribute(name = "design")
+   public Taco design() {
+        return new Taco();
+   }
+
+    @PostMapping
+    public String processDesign(@Valid Taco taco, Errors errors, @ModelAttribute Order order) {
+        if(errors.hasErrors()) {
+            return "design";
+        }
+
+        Taco saved = designRepo.save(taco);
+        order.addDesign(saved);
         return "redirect:/orders/current";
- }
-
-    private List<Ingredient> filterByType(
-            List<Ingredient> ingredients, Type type) {
-        return ingredients
-                .stream()
-                .filter(x -> x.getType().equals(type))
-                .collect(Collectors.toList());
     }
 
-//end::filterByType[]
-// tag::foot[]
+    private List<Ingredient> filterByType(List<Ingredient> ingredients, Type type) {
+
+        return ingredients.stream()
+                .filter(x -> x.getType().equals(type))
+                .collect(Collectors.toList());
+
+    }
 }
-// end::foot[]
