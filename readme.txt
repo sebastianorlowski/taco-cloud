@@ -1,0 +1,1 @@
+# Aplikacja jest tworzona na podstawie książki Spring w akcji wyd. 5.
