@@ -1,0 +1,14 @@
+taco:
+  orders:
+    pageSize: 25
+
+logging:
+  level:
+    tacos: WARN
+
+
+spring:
+  security:
+    user:
+      name:
+
